@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Mobile Playoff Probability Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<style>
+    /* 1. Base Styles */
+    body { 
+        font-family: Arial, sans-serif; 
+        margin: 0; /* Remove default margin */
+        padding: 20px; 
+        background-color: #f8f9fa; 
+        color: #343a40; 
+    }
+    h2 { 
+        color: #007bff; 
+        border-bottom: 3px solid #007bff; 
+        padding-bottom: 10px; 
+        margin-bottom: 25px; 
+        text-align: center; /* Center title */
+        font-size: 1.5em; /* Slightly smaller for mobile */
+    }
+    
+    /* 2. Input/Section Containers */
+    .input-section { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 20px; 
+        max-width: 450px; 
+        margin: 0 auto 30px auto; /* Center on page */
+        padding: 15px;
+        border: 1px solid #ced4da;
+        border-radius: 8px;
+        background-color: #ffffff;
+    }
+    .input-group { 
+        display: flex; 
+        flex-direction: column; /* Stack items vertically by default on small screens */
+        justify-content: space-between; 
+        align-items: flex-start; /* Align labels to the left */
+        gap: 5px;
+    }
+    label { 
+        font-weight: bold; 
+        color: #495057; 
+        width: 100%; /* Full width for label */
+        margin-bottom: 5px;
+    }
+    select, input[type="number"] {
+        width: 100%; /* Full width for inputs */
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 1em;
+        box-sizing: border-box; /* Crucial: padding doesn't increase width */
+    }
+
+    /* 3. Results Section */
+    .results-section {
+        padding: 15px;
+        border: 2px solid #28a745;
+        border-radius: 8px;
+        background-color: #e9f7ee;
+        max-width: 650px;
+        margin: 0 auto;
+    }
+    .result-item {
+        margin-bottom: 8px;
+        font-size: 1em;
+    }
+    .result-label {
+        font-weight: bold;
+        color: #1a7534;
+        display: block; /* Make label stack above value on small screens */
+        margin-bottom: 2px;
+    }
+    .highlight-red { color: #dc3545; font-weight: bold; }
+    .highlight-green { color: #28a745; font-weight: bold; }
+    .note { margin-top: 15px; font-size: 0.8em; color: #6c757d; }
+
+    /* 4. Desktop Optimization (Media Query) */
+    @media (min-width: 768px) {
+        /* On screens wider than 768px (tablets/desktops), use horizontal layout */
+        .input-group { 
+            flex-direction: row; 
+            align-items: center; 
+            gap: 15px;
+        }
+        label { 
+            width: auto;
+            flex-basis: 50%; /* Give label half the width */
+            margin-bottom: 0;
+        }
+        select, input[type="number"] {
+            flex-basis: 45%; /* Give input/select the other half */
+        }
+        h2 { font-size: 2em; }
+    }
+</style>
+</head>
+<body>
+
+<h2>🏈 Single-Team Playoff Scenario Calculator</h2>
+
+<div class="input-section">
+    <div class="input-group">
+        <label for="teamSelect">1. **Select Your Team:**</label>
+        <select id="teamSelect" onchange="updateInputs(); calculateOdds();">
+            <option value="8">Bama (8-3)</option>
+            <option value="7">Team Rawdawg345 (7-4)</option>
+            <option value="7">Dallas Carter (7-4)</option>
+            <option value="7">Nate Higgers (7-4)</option>
+            <option value="6">First team all IR (6-5)</option>
+            <option value="5">Back to the Lake (5-6)</option>
+            <option value="5">Obi Wan Jakobi (5-6)</option>
+            <option value="5">Bobby Balls (5-6)</option>
+            <option value="4">Sun (4-7)</option>
+            <option value="4">So there was this Guru (4-7)</option>
+            <option value="4">The Czar (4-7)</option>
+            <option value="4">Jeff Garcia (4-7)</option>
+        </select>
+    </div>
+    <div class="input-group">
+        <label>Current Wins (Auto-filled):</label>
+        <input type="number" id="currentWinsDisplay" value="8" min="0" disabled style="background-color: #e9ecef;">
+        <input type="hidden" id="currentWins" value="8">
+    </div>
+    <div class="input-group">
+        <label for="remainingGames">2. **Remaining Games** in Season (3 Weeks Max):</label>
+        <input type="number" id="remainingGames" value="3" min="0" max="3" oninput="calculateOdds()">
+    </div>
+    <div class="input-group">
+        <label for="targetWins">3. **Target Final Win Total** for Playoffs:</label>
+        <input type="number" id="targetWins" value="7" min="1" max="14" oninput="calculateOdds()">
+    </div>
+</div>
+
+<div class="results-section">
+    <h3>✅ Playoff Scenario Analysis for <span id="selectedTeamName" class="highlight-green">Bama</span></h3>
+    <div id="results">
+        <p>Select your team and enter the target win total to see your scenario.</p>
+    </div>
+    <p class="note">**Target Final Win Total** is the total number of wins (Current + Remaining) you believe is necessary to secure a playoff spot (e.g., 7-7 or 8-6).</p>
+</div>
+
+<script>
+    const teamData = {
+        "Bama (8-3)": 8,
+        "Team Rawdawg345 (7-4)": 7,
+        "Dallas Carter (7-4)": 7,
+        "Nate Higgers (7-4)": 7,
+        "First team all IR (6-5)": 6,
+        "Back to the Lake (5-6)": 5,
+        "Obi Wan Jakobi (5-6)": 5,
+        "Bobby Balls (5-6)": 5,
+        "Sun (4-7)": 4,
+        "So there was this Guru (4-7)": 4,
+        "The Czar (4-7)": 4,
+        "Jeff Garcia (4-7)": 4
+    };
+
+    function updateInputs() {
+        const select = document.getElementById('teamSelect');
+        const selectedOption = select.options[select.selectedIndex];
+        const currentWins = parseInt(selectedOption.value);
+        const teamName = selectedOption.text.split('(')[0].trim();
+
+        // Update the hidden and displayed win counts
+        document.getElementById('currentWins').value = currentWins;
+        document.getElementById('currentWinsDisplay').value = currentWins;
+        document.getElementById('selectedTeamName').textContent = teamName;
+        
+        // Recalculate based on the new selection
+        calculateOdds();
+    }
+
+    function calculateOdds() {
+        // Use the hidden input value
+        const currentWins = parseInt(document.getElementById('currentWins').value) || 0;
+        const remainingGames = parseInt(document.getElementById('remainingGames').value) || 0;
+        const targetWins = parseInt(document.getElementById('targetWins').value) || 0;
+        const resultsDiv = document.getElementById('results');
+        const maxWins = currentWins + remainingGames;
+
+        // --- Error Handling and Special Cases ---
+
+        if (targetWins > maxWins) {
+            resultsDiv.innerHTML = `
+                <p class="result-item"><span class="highlight-red">Eliminated!</span> You need ${targetWins} wins but can only reach a maximum of ${maxWins}.</p>
+            `;
+            return;
+        }
+
+        if (targetWins <= currentWins) {
+            resultsDiv.innerHTML = `<p class="result-item"><span class="highlight-green">Congrats!</span> You have already met or surpassed the Target Win Total of ${targetWins}. Your playoff odds are excellent!</p>`;
+            return;
+        }
+
+        if (remainingGames === 0 && targetWins > currentWins) {
+            resultsDiv.innerHTML = `<p class="result-item"><span class="highlight-red">Eliminated!</span> You have 0 games left and did not reach the Target Win Total (${targetWins}).</p>`;
+            return;
+        }
+
+        // --- Core Calculation ---
+
+        const requiredWins = targetWins - currentWins;
+        const winRateNeeded = (requiredWins / remainingGames) * 100;
+        
+        let oddsMessage = '';
+        if (requiredWins === remainingGames) {
+            oddsMessage = `<span class="highlight-red">${remainingGames} Wins Required.</span> You must win every remaining game!`;
+        } else {
+            oddsMessage = `<span class="highlight-green">${requiredWins} Wins Required.</span>`;
+        }
+        
+        // How many losses can the team afford?
+        const maxLosses = remainingGames - requiredWins;
+        let worstCaseMessage = `You can afford up to <span class="highlight-red">${maxLosses} losses</span> over the remaining ${remainingGames} games.`;
+        
+        if (maxLosses < 0) {
+            worstCaseMessage = "Cannot be reached.";
+        } else if (maxLosses === remainingGames) {
+            worstCaseMessage = "You don't need any more wins to meet this target! (Target met)";
+        }
+
+        resultsDiv.innerHTML = `
+            <div class="result-item"><span class="result-label">Total Target Wins:</span> ${targetWins} W (${targetWins}-${14-targetWins} Final Record)</div>
+            <div class="result-item"><span class="result-label">Maximum Possible Wins:</span> ${maxWins} W</div>
+            <hr style="border-top: 1px solid #c3e6cb;">
+            <div class="result-item"><span class="result-label">Remaining Wins Needed:</span> ${oddsMessage}</div>
+            <div class="result-item"><span class="result-label">Required Win Rate:</span> <span class="highlight-red">${winRateNeeded.toFixed(1)}%</span> over the remaining games.</div>
+            <div class="result-item"><span class="result-label">Must Avoid:</span> ${worstCaseMessage}</div>
+        `;
+    }
+
+    // Initialize the inputs on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        updateInputs();
+    });
+</script>
+
+</body>
+</html>
